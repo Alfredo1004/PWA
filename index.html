@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cola de Turnos - Banco</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #00c6ff, #0072ff);
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #333;
+    }
+
+    .container {
+      display: flex;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      width: 900px;
+      max-width: 95%;
+      height: 550px;
+    }
+
+    /* Panel izquierdo (interfaz de usuario) */
+    .left-panel {
+      flex: 2;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background-color: #f9f9f9;
+    }
+
+    .left-panel h1 {
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 28px;
+      color: #333;
+    }
+
+    .input-area {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    input {
+      width: 70%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #bbb;
+      outline: none;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    input:focus {
+      border-color: #0072ff;
+      box-shadow: 0 0 8px rgba(0, 114, 255, 0.3);
+    }
+
+    button {
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, background-color 0.3s;
+      margin: 10px 5px;
+    }
+
+    #agregarBtn {
+      background-color: #0072ff;
+    }
+
+    #agregarBtn:hover {
+      background-color: #005bd1;
+      transform: scale(1.05);
+    }
+
+    #atenderBtn {
+      background-color: #f44336;
+    }
+
+    #atenderBtn:hover {
+      background-color: #d32f2f;
+      transform: scale(1.05);
+    }
+
+    .queue {
+      margin-top: 25px;
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      background-color: #e9f2ff;
+      margin: 8px 0;
+      padding: 10px 15px;
+      border-radius: 10px;
+      font-weight: 500;
+      transition: transform 0.2s;
+    }
+
+    li:first-child {
+      background-color: #d1e7dd;
+      border-left: 5px solid #0072ff;
+    }
+
+    li:hover {
+      transform: scale(1.02);
+    }
+
+    .vacio {
+      color: #888;
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    /* Panel derecho (turno actual) */
+    .right-panel {
+      flex: 1;
+      background: linear-gradient(180deg, #0072ff, #00c6ff);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      padding: 30px;
+      position: relative;
+    }
+
+    .turno-actual {
+      font-size: 22px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 15px 20px;
+      border-radius: 12px;
+      width: 90%;
+      margin-bottom: 20px;
+    }
+
+    .numero-turno {
+      font-size: 60px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    /* Notificación animada */
+    .notificacion {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      z-index: 999;
+    }
+
+    .notificacion.mostrar {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left-panel">
+      <div>
+        <h1>Cola de Turnos</h1>
+        <div class="input-area">
+          <input type="text" id="nombreInput" placeholder="Nombre de la persona" />
+          <div>
+            <button id="agregarBtn">Agregar turno</button>
+            <button id="atenderBtn">Atender siguiente</button>
+          </div>
+        </div>
+
+        <div class="queue">
+          <ul id="listaTurnos"></ul>
+          <p id="mensajeVacio" class="vacio">No hay personas en espera.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <h2>Turno Actual</h2>
+      <div class="turno-actual" id="turnoActual">
+        Ninguno
+      </div>
+      <div class="numero-turno" id="numeroTurno">--</div>
+    </div>
+  </div>
+
+  <!-- Notificación flotante -->
+  <div id="notificacion" class="notificacion"></div>
+
+  <script>
+    const nombreInput = document.getElementById('nombreInput');
+    const agregarBtn = document.getElementById('agregarBtn');
+    const atenderBtn = document.getElementById('atenderBtn');
+    const listaTurnos = document.getElementById('listaTurnos');
+    const mensajeVacio = document.getElementById('mensajeVacio');
+    const turnoActual = document.getElementById('turnoActual');
+    const numeroTurno = document.getElementById('numeroTurno');
+    const notificacion = document.getElementById('notificacion');
+
+    let cola = [];
+    let contadorTurno = 0;
+    let turnoAtendiendo = null;
+
+    function actualizarLista() {
+      listaTurnos.innerHTML = '';
+      if (cola.length === 0) {
+        mensajeVacio.style.display = 'block';
+      } else {
+        mensajeVacio.style.display = 'none';
+        cola.forEach(turno => {
+          const li = document.createElement('li');
+          li.textContent = `Turno #${turno.numero} - ${turno.nombre}`;
+          listaTurnos.appendChild(li);
+        });
+      }
+    }
+
+    function actualizarTurnoActual() {
+      if (turnoAtendiendo) {
+        turnoActual.textContent = `${turnoAtendiendo.nombre}`;
+        numeroTurno.textContent = `#${turnoAtendiendo.numero}`;
+      } else {
+        turnoActual.textContent = "Ninguno";
+        numeroTurno.textContent = "--";
+      }
+    }
+
+    function mostrarNotificacion(mensaje) {
+      notificacion.textContent = mensaje;
+      notificacion.classList.add('mostrar');
+      setTimeout(() => {
+        notificacion.classList.remove('mostrar');
+      }, 3000);
+    }
+
+    agregarBtn.addEventListener('click', () => {
+      const nombre = nombreInput.value.trim();
+      if (nombre !== '') {
+        contadorTurno++;
+        const nuevoTurno = { numero: contadorTurno, nombre };
+        cola.push(nuevoTurno);
+        nombreInput.value = '';
+        actualizarLista();
+        mostrarNotificacion(`Se agregó Turno #${nuevoTurno.numero} - ${nombre}`);
+      } else {
+        mostrarNotificacion('⚠️ Ingresa un nombre válido');
+      }
+    });
+
+    atenderBtn.addEventListener('click', () => {
+      if (cola.length > 0) {
+        turnoAtendiendo = cola.shift();
+        mostrarNotificacion(`🎧 Atendiendo a Turno #${turnoAtendiendo.numero} - ${turnoAtendiendo.nombre}`);
+        actualizarLista();
+        actualizarTurnoActual();
+      } else {
+        mostrarNotificacion('No hay personas en la cola');
+      }
+    });
+
+    actualizarLista();
+    actualizarTurnoActual();
+  </script>
+</body>
+</html>
